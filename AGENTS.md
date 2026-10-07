@@ -7,15 +7,23 @@ Emacs (`ayu-night`, `ayu-dusk`, `ayu-day`) built from the official Ayu palette.
 
 - Never commit or push without explicit approval from the user. Prepare the
   changes, show what was done, and wait for the user's go-ahead.
-- Before presenting changes, byte-compile the whole package and make sure it
-  reports **zero warnings**, then delete the `.elc` files again (`*.elc` is
-  gitignored; a stale build must never shadow the source while the user is
-  iterating).
+- Before presenting changes, run the ert checks, byte-compile the whole package
+  and make sure it reports **zero warnings**, then delete the `.elc` files again
+  (`*.elc` is gitignored; a stale build must never shadow the source while the
+  user is iterating).
 - Then load-test all three flavours in batch: a successful load is also the
   check that every colour the faces ask for exists, because the `ayu` macro
   signals an error naming a missing palette entry. Re-run the duplicate check
   as well: two entries for the same face are legal but mean one of them is
   dead code.
+- A colour must reach the face as a string, and anything built (a list, a plist)
+  must be spliced into the backquoted spec with a comma. Emacs accepts neither
+  mistake loudly: an uncommaed `(list ...)` or a list where a colour belongs
+  turns into a face that is simply never rendered. `ayu-themes-check.el` guards
+  both; if you find a third shape of this family, add an invariant for it.
+- Finish by reading the values off a real frame (see *What the batch checks do
+  not catch*), not by trusting the batch run: everything above passes on specs
+  that render nothing at all.
 - Never "fix" contrast by editing palette values. The palettes are the official
   Ayu data (see [Provenance of the colours](#provenance-of-the-colours)) and the
   themes must match <https://ayutheme.com/>. Contrast is opt-in through the
@@ -46,6 +54,7 @@ Emacs (`ayu-night`, `ayu-dusk`, `ayu-day`) built from the official Ayu palette.
 | `ayu-night-theme.el` | ~45 lines: requires the core and calls `ayu-themes-define-theme` for the `night` (official `dark`) palette. |
 | `ayu-dusk-theme.el` | Same for `dusk` (official `mirage`). |
 | `ayu-day-theme.el` | Same for `day` (official `light`). |
+| `ayu-themes-check.el` | The invariant checks (ert): palette entries are plain hex strings, all flavours define the same faces, no spec attribute value is malformed. Run it before handing anything over. |
 | `README.org` | User documentation: installation, options, contrast table, coverage. |
 | `CHANGELOG.md` | Keep a Changelog, Semantic Versioning. |
 
@@ -75,11 +84,15 @@ appended in `ayu-themes--face-specs`:
 ## Build, Test, and Development Commands
 
 ```sh
-# byte-compile everything; must be warning-free
-emacs -Q --batch -L . -f batch-byte-compile ayu-themes.el ayu-*-theme.el
+# 1. the invariant checks; everything below is a fallback when they are not
+#    enough.  They catch the mistakes Emacs swallows silently (see below).
+emacs -Q --batch -L . -l ayu-themes-check.el -f ert-run-tests-batch-and-exit
+
+# 2. byte-compile everything; must be warning-free
+emacs -Q --batch -L . -f batch-byte-compile ayu-themes.el ayu-*-theme.el ayu-themes-check.el
 rm -f *.elc
 
-# load each flavour (also validates that every palette key a face uses exists)
+# 3. load each flavour (also validates that every palette key a face uses exists)
 emacs -Q --batch -L . --eval '(progn
   (add-to-list (quote custom-theme-load-path) default-directory)
   (dolist (th (quote (ayu-night ayu-dusk ayu-day)))
@@ -160,12 +173,51 @@ State at the time of writing: 898 third-party faces installed, 2196 styled,
 In other words, every face that belongs to a real mode or UI package is covered.
 Re-run the audit after touching the face list to prove nothing regressed.
 
-### What cannot be checked without a display
+### What the batch checks do not catch
 
-Batch Emacs has no real frame, so `face-attribute` returns `unspecified` and the
-rendering itself (contrast on a real terminal, how the mode line lines up) can
-only be judged in a live Emacs. The structural checks above are the ones that
-must pass before handing the change over.
+The checks above cover the specs as data. What they cannot do is render, and
+batch Emacs has no real frame, so `face-attribute` returns `unspecified` there.
+Two mistakes were already shipped this way and both looked perfect in batch:
+
+- **A malformed colour.** The `ayu` macro resolved the palette with `cdr`
+  instead of `cadr`, so every colour was a one element list instead of a string.
+  All three themes loaded, `custom-theme-set-faces` accepted the specs, and
+  nothing was coloured anywhere: the faces were silently ignored, `C-x C-f`
+  even failed with `wrong-type-argument stringp ("#10141c")`. `M-x
+  load-theme` says nothing about it — the only trace is the harmless looking
+  `Invalid face reference: class` in `*Messages*`.
+- **An unevaluated form inside a spec.** `:box (list :line-width 1 :color ...)`
+  written inside the backquoted spec stays a literal list whose first element is
+  the symbol `list`, and Emacs refuses the face with
+  `Invalid face box: list, :line-width, 1, :color, ...`.
+  Build such a value outside the backquote (see `ayu-themes--box`) and splice it
+  with a comma.
+
+So, after the checks pass, look at a real frame once. With a running daemon
+that is one command, no restart needed — this is also the fastest way to test a
+change while the user has Emacs open:
+
+```sh
+# rebuild the theme in the running Emacs and read the real values
+emacsclient -e '(progn (load "/path/to/ayu-themes.el") (load-theme (quote ayu-night) t)
+                       (face-attribute (quote fill-column-indicator) :foreground))'
+```
+
+`(load "ayu-themes.el")` is required first: the spec functions are macro
+expanded when the file is loaded, and `require` would be a no-op because the
+theme files already loaded the feature. Then read the values on a frame that
+has a display — with several frames, pass the frame explicitly, the daemon's
+own initial frame has no colour support and legitimately reports `unspecified`:
+
+```elisp
+(let ((f (car (seq-filter (lambda (f) (> (or (ignore-errors (display-color-cells f)) 0) 0))
+                          (frame-list)))))
+  (list (face-attribute 'default :background f)
+        (face-attribute 'font-lock-keyword-face :foreground f)))
+```
+
+What is genuinely left to the eye is only the aesthetic part: contrast on the
+real terminal and the layout of the mode line.
 
 ## Provenance of the colours
 
@@ -249,18 +301,25 @@ example. Keep these conclusions, they save a lot of time.
 
 ## Testing Guidelines
 
-- There is no test suite: the project is a static table of face specs. The
-  substitute is the set of checks in *Build, Test, and Development Commands* —
-  byte-compile, load all three flavours, face count, duplicate check, paren
-  depth, coverage audit. Run all of them before presenting a change.
+- The checks are executable: `ayu-themes-check.el` holds them as ert tests, and
+  that is the first thing to run (`emacs -Q --batch -L . -l ayu-themes-check.el
+  -f ert-run-tests-batch-and-exit`). Everything else in *Build, Test, and
+  Development Commands* is a fallback or a one off. When a real mistake slips
+  through, add a test for it before fixing it: it is the only thing that keeps
+  the same class of bug from coming back, and both invariants in there were born
+  that way.
 - When adding an option, prove it does something: build the specs twice with the
   option off and on and diff the result, e.g.
   `(let ((ayu-themes--palette (alist-get 'night ayu-themes-palettes)))
   (cadr (assq 'font-lock-keyword-face (ayu-themes--face-specs))))` versus the
-  same with `ayu-themes-contrasted-syntax` bound to `t`.
+  same with `ayu-themes-contrasted-syntax` bound to `t`. The option test in
+  `ayu-themes-check.el` only proves that the specs stay well formed.
 - The option defaults are part of the contract: everything that changes a colour
   defaults to the original Ayu look (`nil`). `ayu-themes-italic-comments`
   defaults to `t` because Ayu itself sets `fontStyle: italic` on comments.
+- Never trust a green batch run for a rendering question. See *What the batch
+  checks do not catch*: read the values off a real frame with `emacsclient`,
+  which works on the user's running daemon and needs no restart.
 
 ## Commit & Pull Request Guidelines
 

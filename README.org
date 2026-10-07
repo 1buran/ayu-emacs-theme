@@ -223,13 +223,40 @@ Notes on the translation:
 
 * Development
 
+Everything byte-compiles without warnings:
+
 #+begin_src sh
-  emacs -Q -L . -f batch-byte-compile ayu-themes.el ayu-*-theme.el
+  emacs -Q -L . -f batch-byte-compile ayu-themes.el ayu-*-theme.el ayu-themes-check.el
 #+end_src
 
-The file byte-compiles without warnings.  To check that every palette entry a
-face asks for actually exists, just load a theme: the =ayu= macro signals an
-error naming the missing entry.
+=ayu-themes-check.el= holds the invariants as ERT tests -- palette entries are
+plain hex strings, all flavours define the same faces, no face carries a
+malformed attribute value, and the options do not break any of that:
+
+#+begin_src sh
+  emacs -Q --batch -L . -l ayu-themes-check.el -f ert-run-tests-batch-and-exit
+#+end_src
+
+They exist because Emacs is quiet about the mistakes this table can make: a
+colour that arrives as a list instead of a string, or a `(list ...)' left inside
+a backquoted spec, produces a face that is never rendered and no error at all.
+Loading a theme still checks one more thing -- that every palette entry a face
+asks for exists, since the =ayu= macro signals an error naming a missing one:
+
+#+begin_src sh
+  emacs -Q --batch -L . --eval '(progn
+    (add-to-list (quote custom-theme-load-path) default-directory)
+    (load-theme (quote ayu-night) t))'
+#+end_src
+
+To pick a change up in a running Emacs, load the core and then the theme; the
+core has to be reloaded explicitly, because the face specs are macro expanded
+when the file is loaded and =require= would be a no-op:
+
+#+begin_src emacs-lisp
+  (load "/path/to/ayu-themes.el")
+  (load-theme 'ayu-night t)
+#+end_src
 
 * License
 
