@@ -168,26 +168,117 @@ too faint.  Comments are deliberately quiet in all three flavours.
 If something is missing, add it to the matching =ayu-themes--faces-...=
 function; it is picked up automatically.
 
-** YAML and the tree-sitter modes
+** Tree-sitter modes
 
 A tree-sitter buffer is the best lit one, because the theme styles every face
 those modes use.  The classic modes are thinner, and one case is worth knowing
 about: =yaml-mode= hands a key to =font-lock-variable-name-face=, and the
 official Ayu renders the =variable= scope as plain foreground, so keys and bare
 scalars stay uncoloured there.  Ayu's own previews look different only because
-their TextMate grammar calls a key =entity.name.tag=.
+their TextMate grammar calls a key =entity.name.tag=.  With =yaml-ts-mode= the
+keys, the plain scalars and numbers, the delimiters and the comments all get a
+colour.  Measured on Emacs 31.1, the tree-sitter modes hand font-lock this many
+faces and the theme styles every one of them: go 10, php 11, js 10, html 5,
+css 10.
 
-Switching =\.ya?ml= to the built-in =yaml-ts-mode= colours the keys (the
-=variable.member= tone), the plain scalars and numbers, the delimiters and the
-comments.  It needs one grammar, built once per machine:
+*** The grammar recipe lives in the mode, not in Emacs
+
+Emacs does not ship the grammars -- they are compiled C libraries, not Elisp --
+but every tree-sitter mode registers its own recipe, *including the revision
+Emacs was tested against*, as soon as the library that defines the mode is
+loaded:
 
 #+begin_src emacs-lisp
-  (add-to-list 'treesit-language-source-alist
-               '(yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml"))
-  ;; then: M-x treesit-install-language-grammar RET yaml
-  (when (treesit-language-available-p 'yaml)
-    (add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode)))
+  (progn (require 'go-ts-mode) (assq 'go treesit-language-source-alist))
+  ;; => (go "https://github.com/tree-sitter/tree-sitter-go"
+  ;;        :commit "12fe553fdaaa7449f764bc876fd777704d4fb752")
 #+end_src
+
+=M-x treesit-install-language-grammar= and the "grammar is missing, install
+it?" prompt that the modes ask themselves both work off those entries, so a
+missing grammar is one command away and the revision is never guessed:
+
+#+begin_src emacs-lisp
+  (require 'go-ts-mode)                  ; registers the recipe
+  (treesit-install-language-grammar 'go) ; builds it into ~/.emacs.d/tree-sitter/
+#+end_src
+
+Do not hand-write the alist.  It looks tempting, and it is how this README used
+to do it, but an entry without =:commit= installs the default branch, which may
+be newer than the revision the mode's queries were written for.  Two more
+details: a few modes share a library (=css-ts-mode= lives in =css-mode.el=,
+=js-ts-mode= in =js.el=), and a mode may want more than one grammar
+(=php-ts-mode= needs =php=, =phpdoc= and =jsdoc=; =go-ts-mode= needs =go=,
+=gomod= and =gowork=).
+
+Where Emacs has no tree-sitter mode there is no recipe to trust: SCSS and Sass
+have none in 31.1, so =scss-mode= and =sass-mode= stay as they are.  For those
+languages the recipe lists of nvim-treesitter, helix or =treesit-auto= are a
+community convention, not a reference.
+
+*** A tree-sitter mode does not inherit the classic mode's hooks
+
+A tree-sitter mode is declared as derived from the mode it replaces, but that
+declaration is only for =derived-mode-p=: neither the hooks nor the keymaps are
+inherited, and on a remapped path the classic mode is not loaded at all.  A
+check that takes one line:
+
+#+begin_src emacs-lisp
+  ;; in a go-ts-mode buffer, go-mode-hook does not run by itself
+  (add-hook 'go-mode-hook (lambda () (setq ran t)))
+  (with-temp-buffer (go-ts-mode) ran)      ; => nil
+#+end_src
+
+So every hook attached to =go-mode-hook= (=lsp=, =yasnippet=, =indent-bars=,
+=add-node-modules-path=) would silently stay off, and the helpers that are not
+autoloaded (=gofmt-before-save=, =go-remove-unused-imports=,
+=go-goto-imports=) would be void.  Run the classic hooks and adopt the classic
+keymap from the tree-sitter mode's own hook:
+
+#+begin_src emacs-lisp
+  (defun my-ts-adopt-classic-mode ()
+    "Run the classic modes' hooks and inherit their keymaps."
+    (dolist (classic (cdr (assq major-mode '((go-ts-mode . (go-mode))
+                                             (php-ts-mode . (php-mode))))))
+      (require classic nil t)
+      (run-hooks (intern (concat (symbol-name classic) "-hook")))
+      (let ((classic-map (intern (concat (symbol-name classic) "-map")))
+            (mode-map (intern (concat (symbol-name major-mode) "-map"))))
+        (when (and (boundp classic-map) (boundp mode-map))
+          (set-keymap-parent (symbol-value mode-map) (symbol-value classic-map))))))
+
+  (add-hook 'go-ts-mode-hook #'my-ts-adopt-classic-mode)
+  (add-hook 'php-ts-mode-hook #'my-ts-adopt-classic-mode)
+#+end_src
+
+=html-ts-mode= is the exception: it really is derived from =html-mode=, so that
+hook runs by itself.  For JavaScript the classic setup is spread over
+=js-mode-hook=, =js2-mode-hook= and =rjsx-mode-hook=, and all three have to be
+run.
+
+*** Checking what a mode really highlights
+
+For a theme the faces are the whole point, and a grammar that does not match the
+queries of its mode makes part of the fontification silently disappear.  The way
+to tell is to list the faces the mode actually applies; this needs no display,
+so it works in =--batch=:
+
+#+begin_src emacs-lisp
+  (with-temp-buffer
+    (insert-file-contents "sample.go")
+    (go-ts-mode)
+    (font-lock-ensure)
+    (let (faces)
+      (goto-char (point-min))
+      (while (not (eobp))
+        (let ((face (get-text-property (point) 'face)))
+          (push (if (listp face) (car face) face) faces))
+        (forward-char 1))
+      (sort (delete-dups (delq nil faces)) #'string<)))
+#+end_src
+
+A face in that list that the theme does not style is a gap in the theme; a face
+that is missing from the list is a feature the grammar does not provide.
 
 ** Checking the coverage
 

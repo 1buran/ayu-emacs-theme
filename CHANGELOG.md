@@ -40,10 +40,13 @@ of `ayu-themes.el` and of the three `ayu-*-theme.el` files carry.
 - `ayu-themes-check.el`: the invariant checks as ert tests -- palette entries are
   plain hex strings, every flavour defines the same faces, no spec carries a
   malformed attribute value, and the options do not break any of that.
-- A README note on YAML: the classic `yaml-mode` leaves keys and bare scalars
-  flat because Ayu renders the `variable` scope as plain foreground, while the
-  built-in `yaml-ts-mode` gets the full set of tree-sitter faces the theme
-  styles. The note carries the grammar recipe.
+- A README section on the tree-sitter modes: why a tree-sitter buffer is the
+  best lit one (the `yaml-mode` keys are flat because Ayu renders the `variable`
+  scope as plain foreground), where Emacs keeps the grammar recipes -- each mode
+  registers its own, with the revision Emacs was tested against -- how to
+  install a grammar from that recipe instead of hand-writing the alist, the fact
+  that a tree-sitter mode does not inherit the classic mode's hooks or keymaps
+  and what to do about it, and how to list the faces a mode actually applies.
 
 ### Fixed
 

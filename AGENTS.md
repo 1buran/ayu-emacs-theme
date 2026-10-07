@@ -24,6 +24,11 @@ Emacs (`ayu-night`, `ayu-dusk`, `ayu-day`) built from the official Ayu palette.
 - Finish by reading the values off a real frame (see *What the batch checks do
   not catch*), not by trusting the batch run: everything above passes on specs
   that render nothing at all.
+- Same discipline when documenting Emacs itself: load the library in question
+  before claiming what it does or does not provide. `treesit-language-source-alist`
+  is nil until a tree-sitter mode registers its recipe, and a README once told
+  readers to hand-write that alist because of a check made too early. Check the
+  mechanism, not the default value of the variable.
 - Never "fix" contrast by editing palette values. The palettes are the official
   Ayu data (see [Provenance of the colours](#provenance-of-the-colours)) and the
   themes must match <https://ayutheme.com/>. Contrast is opt-in through the
