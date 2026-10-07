@@ -47,6 +47,11 @@ of `ayu-themes.el` and of the three `ayu-*-theme.el` files carry.
   install a grammar from that recipe instead of hand-writing the alist, the fact
   that a tree-sitter mode does not inherit the classic mode's hooks or keymaps
   and what to do about it, and how to list the faces a mode actually applies.
+- Two more findings in that section: `treesit-font-lock-level` is 3 by default
+  and several features -- a Go method call, the YAML delimiters, the ERROR nodes
+  of a parse -- live in the fourth level, where they do not paint at all; and
+  tree-sitter is more precise but not cheaper, with the numbers to prove it
+  (1.6 ms against 3.0 ms per edit on a 458 KB YAML, 3.8 MB against 27 MB).
 
 ### Fixed
 

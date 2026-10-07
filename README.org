@@ -256,6 +256,34 @@ hook runs by itself.  For JavaScript the classic setup is spread over
 =js-mode-hook=, =js2-mode-hook= and =rjsx-mode-hook=, and all three have to be
 run.
 
+*** Emacs highlights three of the four levels
+
+=treesit-font-lock-level= is 3 by default, and a number of features sit in the
+fourth, where they simply do not paint.  The one that shows in a Go buffer: a
+method call on an object, =x.Foo()=, is given =font-lock-function-call-face=
+only at level 4, so =logger.Debug= and =r.PublishNews= stay uncoloured where
+go-mode painted them yellow.  The =:= and =-= delimiters of YAML are in the same
+level.  The fourth level also paints the =ERROR= nodes of a parse with
+=font-lock-warning-face=, so a file the grammar cannot digest shows it instead
+of staying silent.
+
+#+begin_src emacs-lisp
+  (setq treesit-font-lock-level 4)
+#+end_src
+
+Measured on a 2000 line Go file, that level costs: the first fontification goes
+from 34 to 64 ms, an edit from 0.36 to 0.40 ms.  Buffers that are already open
+do not notice the change -- run =M-x treesit-font-lock-recompute-features= and
+=M-x font-lock-flush= in them, or reopen the file.
+
+*** Tree-sitter is more precise, not cheaper
+
+On a 20000 line YAML file (458 KB) the classic regexp mode needed 1.6 ms per
+edit against 3.0 ms for =yaml-ts-mode=, and 3.8 MB of memory against 27 MB; on
+the sizes a config file has (a few KB) neither number is noticeable.  Do not
+switch for speed -- switch for the colours, and pick your modes per language:
+=js2-mode=, for instance, has more faces of its own than =js-ts-mode=.
+
 *** Checking what a mode really highlights
 
 For a theme the faces are the whole point, and a grammar that does not match the
