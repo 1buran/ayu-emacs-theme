@@ -37,3 +37,19 @@ of `ayu-themes.el` and of the three `ayu-*-theme.el` files carry.
 - `AGENTS.md`: the contributor guide, including the provenance of the colours,
   the verification commands and the research notes that explain why the package
   is laid out the way it is.
+- `ayu-themes-check.el`: the invariant checks as ert tests -- palette entries are
+  plain hex strings, every flavour defines the same faces, no spec carries a
+  malformed attribute value, and the options do not break any of that.
+
+### Fixed
+
+- The themes were built but nothing was coloured on screen: the `ayu` macro
+  resolved a palette entry with `cdr` instead of `cadr`, so every colour reached
+  the faces as a one element list (`("#10141c")`). Emacs accepted the specs and
+  silently ignored them — `M-x load-theme` reported no error at all. Colours now
+  arrive as strings; batch checks could not see this, `ayu-themes-check.el` can.
+- `tab-bar-tab` got an unevaluated `(list :line-width 1 :color ...)` as its
+  `:box` value, because a bare `list` call inside the backquoted face spec is
+  data, not a call. That one did fail loudly (`Invalid face box: list, ...`).
+  The value is now built by `ayu-themes--box`, which also serves the mode line
+  border.

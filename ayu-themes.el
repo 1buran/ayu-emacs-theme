@@ -258,10 +258,13 @@ a tinted background, which makes the document structure stand out."
   "Alist of colours currently in use, see `ayu-themes-palettes'.")
 
 (defmacro ayu (color)
-  "Return the value of COLOR from the palette being defined.
+  "Return the string value of COLOR from the palette being defined.
 This is an internal macro of `ayu-themes'; it is only meaningful
-while `ayu-themes-define-theme' builds a theme."
-  `(or (cdr (assq ,color ayu-themes--palette))
+while `ayu-themes-define-theme' builds a theme.  The palettes are
+alists of (NAME . \"#rrggbb\"), hence the `cadr': returning the cdr
+would hand every face a one element list instead of a colour, which
+Emacs accepts silently while never rendering it."
+  `(or (cadr (assq ,color ayu-themes--palette))
        (error "ayu-themes: no such palette entry: %s" ,color)))
 
 (defun ayu-themes--syntax (color)
@@ -303,13 +306,20 @@ OVERLINE and BACKGROUND are only used when
   (when ayu-themes-org-intense-colors
     (list :overline overline :background background)))
 
+(defun ayu-themes--box (color)
+  "Return a face `:box' value drawing a one pixel border in COLOR.
+COLOR is a palette entry name.  The result is a plist, so it has to
+be spliced into a spec with a comma: a bare `(list ...)' inside the
+backquoted spec of a face stays a literal list and Emacs rejects it
+with \"Invalid face box: list, ...\"."
+  (list :line-width 1 :color (ayu color)))
+
 (defun ayu-themes--mode-line-border (&optional inactive)
   "Face attributes adding a border to a mode line.
 This returns nil unless `ayu-themes-mode-line-border' is non-nil.
 INACTIVE selects the colour of an inactive mode line."
   (when ayu-themes-mode-line-border
-    (list :box (list :line-width 1
-                     :color (if inactive (ayu 'border) (ayu 'border-strong))))))
+    (list :box (ayu-themes--box (if inactive 'border 'border-strong)))))
 
 (defun ayu-themes--face-specs ()
   "Return the face specs of the current palette.
@@ -1930,7 +1940,7 @@ what the `ayu-*-theme.el' files call."
       (tab-bar-tab ((,c (:background ,(ayu 'bg)
                                      :foreground ,(ayu 'fg)
                                      :weight bold
-                                     :box (list :line-width 1 :color ,(ayu 'accent))))))
+                                     :box ,(ayu-themes--box 'accent)))))
       (tab-bar-tab-inactive ((,c (:background ,(ayu 'bg-dim)
                                               :foreground ,(ayu 'fg-dim)))))
       (tab-bar-tab-highlight ((,c (:background ,(ayu 'bg-alt)
