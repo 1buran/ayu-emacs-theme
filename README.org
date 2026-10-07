@@ -168,6 +168,27 @@ too faint.  Comments are deliberately quiet in all three flavours.
 If something is missing, add it to the matching =ayu-themes--faces-...=
 function; it is picked up automatically.
 
+** YAML and the tree-sitter modes
+
+A tree-sitter buffer is the best lit one, because the theme styles every face
+those modes use.  The classic modes are thinner, and one case is worth knowing
+about: =yaml-mode= hands a key to =font-lock-variable-name-face=, and the
+official Ayu renders the =variable= scope as plain foreground, so keys and bare
+scalars stay uncoloured there.  Ayu's own previews look different only because
+their TextMate grammar calls a key =entity.name.tag=.
+
+Switching =\.ya?ml= to the built-in =yaml-ts-mode= colours the keys (the
+=variable.member= tone), the plain scalars and numbers, the delimiters and the
+comments.  It needs one grammar, built once per machine:
+
+#+begin_src emacs-lisp
+  (add-to-list 'treesit-language-source-alist
+               '(yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml"))
+  ;; then: M-x treesit-install-language-grammar RET yaml
+  (when (treesit-language-available-p 'yaml)
+    (add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode)))
+#+end_src
+
 ** Checking the coverage
 
 A face that a package defines but the theme does not style silently falls back
