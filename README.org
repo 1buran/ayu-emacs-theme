@@ -22,10 +22,10 @@ repository (=designer/lib/shiki-theme.ts=, the one <https://ayutheme.com/>
 renders its previews with), translated to Emacs faces -- see the commentary at
 the top of =ayu-themes.el= for the full table.
 
-About 1660 faces are defined per flavour, covering the Emacs core UI, font lock
+About 2200 faces are defined per flavour, covering the Emacs core UI, font lock
 and tree-sitter, org, the completion frameworks, version control, the tree
-sidebars, the mode line families, terminals, mail and news, and a long tail of
-small packages.
+sidebars, the mode line families, terminals, mail and news, and the long tail of
+small packages.  See the [[Coverage]] section for the list.
 
 * Installation
 
@@ -119,9 +119,9 @@ too faint.  Comments are deliberately quiet in all three flavours.
 
 * Coverage
 
-=ayu-themes.el= groups the faces into twelve sections, one function each:
+=ayu-themes.el= groups the faces into thirteen sections, one function each:
 =base=, =font-lock=, =lang=, =org=, =text=, =completion=, =diagnostics=, =vc=,
-=files=, =modeline=, =term= and =misc=.  Roughly, in package terms:
+=files=, =modeline=, =term=, =misc= and =extra=.  Roughly, in package terms:
 
 - *Core UI* :: =default=, =cursor=, =region=, =hl-line=, =fringe=, =line-number=,
   fill column, whitespace, isearch, show-paren, next-error, compilation, the
@@ -159,9 +159,29 @@ too faint.  Comments are deliberately quiet in all three flavours.
   annotate, stripe-buffer, symbol-overlay, nav-flash, beacon, crosshairs,
   calendar/diary/calfw, elfeed, erc/circe/rcirc, message/gnus/notmuch/mu4e,
   alert, tabulated-list, csv, change-log, apropos.
+- *Long tail* :: transient, projectile, rg/ripgrep, php-mode, go-mode,
+  terraform/dockerfile/hcl, js2/rjsx, salt-mode, geben, dap-mode, web-mode
+  leftovers, markdown and AUCTeX leftovers, worklog, gptel, hydra, popup,
+  dired-hacks, mmm-mode, origami, flycheck and lsp-mode leftovers (including
+  the semantic-token faces lsp-mode generates per client).
 
 If something is missing, add it to the matching =ayu-themes--faces-...=
 function; it is picked up automatically.
+
+** Checking the coverage
+
+A face that a package defines but the theme does not style silently falls back
+to the default foreground.  To find those, collect the faces of the packages
+you have installed and subtract the ones the theme sets:
+
+#+begin_src emacs-lisp
+  (let ((ayu-themes--palette (alist-get 'night ayu-themes-palettes)))
+    (length (ayu-themes--face-specs)))          ; => 2196 faces
+#+end_src
+
+On a machine with ~900 third-party faces installed this leaves 45 unstyled
+faces, and all of them belong to other themes (=doom-themes=, =modus-themes=,
+=timu-spacegrey-theme=) or to the niche UI libraries =bui.el= and =llama=.
 
 * Architecture
 
