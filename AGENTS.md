@@ -60,6 +60,7 @@ Emacs (`ayu-night`, `ayu-dusk`, `ayu-day`) built from the official Ayu palette.
 | `ayu-dusk-theme.el` | Same for `dusk` (official `mirage`). |
 | `ayu-day-theme.el` | Same for `day` (official `light`). |
 | `ayu-themes-check.el` | The invariant checks (ert): palette entries are plain hex strings, all flavours define the same faces, no spec attribute value is malformed. Run it before handing anything over. |
+| `scripts/gen-palette.py` | The generator of the palettes: reads the resolver output of the `ayu` npm package and prints the body of `ayu-themes-palettes` ready to paste, plus the WCAG report behind the README contrast table. It is the record of which entries are Ayu's, which are derived, and with which constants. |
 | `README.org` | User documentation: installation, options, contrast table, coverage. |
 | `CHANGELOG.md` | Keep a Changelog, Semantic Versioning. |
 
@@ -228,14 +229,17 @@ real terminal and the layout of the mode line.
 
 This is the part of the project that must not drift.
 
-- **Palettes.** Every hex value comes from the official
+- **Palettes.** Every hex value either comes from the official
   [ayu-theme/ayu-colors](https://github.com/ayu-theme/ayu-colors) repository
   (`themes/dark.yaml`, `themes/mirage.yaml`, `themes/light.yaml`), resolved with
-  its own generator. The resolved output is the `dist/generated/{dark,mirage,light}.js`
+  its own generator, or is derived from those values by
+  `scripts/gen-palette.py` — the composited alphas and the `*-strong` family,
+  listed in that script. The resolved output is the `dist/generated/{dark,mirage,light}.js`
   files of the `ayu` npm package (v9.1.0 at the time of writing), which is what
   `designer/lib/shiki-theme.ts` is built on. Ayu stores colours in OKLCH with
-  relative chroma, so the YAML cannot be read as hex by hand — do not try;
-  re-derive from the published output instead.
+  relative chroma, so the YAML cannot be read as hex by hand — do not try; run
+  the script on the published output instead, as README.org describes under
+  "When Ayu changes".
 - **Syntax mapping.** The scope table in the core's commentary comes from
   `designer/lib/shiki-theme.ts` in that same repository, i.e. the exact mapping
   <https://ayutheme.com/> renders its previews with. When a new scope appears,

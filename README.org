@@ -15,12 +15,15 @@ This package ports the three [[https://ayutheme.com/][Ayu]] flavours to Emacs:
 | =ayu-day=      | =light=       | =#fcfcfc=  | =#5c6166=  |
 
 The colours are the *original* Ayu ones, not an approximation: every hex value
-comes from the palette files of [[https://github.com/ayu-theme/ayu-colors][ayu-theme/ayu-colors]] (=themes/dark.yaml=,
+either comes from the palette files of
+[[https://github.com/ayu-theme/ayu-colors][ayu-theme/ayu-colors]] (=themes/dark.yaml=,
 =themes/mirage.yaml=, =themes/light.yaml=), resolved with the official
-generator.  Syntax highlighting follows the scope mapping that ships with that
-repository (=designer/lib/shiki-theme.ts=, the one <https://ayutheme.com/>
-renders its previews with), translated to Emacs faces -- see the commentary at
-the top of =ayu-themes.el= for the full table.
+generator, or is derived from them by =scripts/gen-palette.py= (the composited
+alpha colours and the =*-strong= family -- see [[Provenance of the colours]]).
+Syntax highlighting follows the scope mapping that ships with that repository
+(=designer/lib/shiki-theme.ts=, the one <https://ayutheme.com/> renders its
+previews with), translated to Emacs faces; the same section lists the handful of
+places where that translation has to be coarse.
 
 About 2200 faces are defined per flavour, covering the Emacs core UI, font lock
 and tree-sitter, org, the completion frameworks, version control, the tree
@@ -116,6 +119,192 @@ too faint.  Comments are deliberately quiet in all three flavours.
 | constant      |  9.3  |  9.0 |  3.3 |       3.7       |
 | operator      |  8.2  |  6.9 |  2.0 |       3.8       |
 | comment       |  3.1  |  3.4 |  2.2 |       3.5       |
+
+* Provenance of the colours
+
+The reference is what <https://ayutheme.com/> renders.  It can be read in three
+steps, every one of them a file you can fetch and check, and none of the values
+in this package is eyeballed or invented.  This section is here so that the next
+person does not have to search for it again.
+
+** The palette
+
+The official data lives in [[https://github.com/ayu-theme/ayu-colors][ayu-theme/ayu-colors]]:
+
+| Flavour     | File                 |
+|-------------+----------------------|
+| =ayu-night= | =themes/dark.yaml=   |
+| =ayu-dusk=  | =themes/mirage.yaml= |
+| =ayu-day=   | =themes/light.yaml=  |
+
+The YAML is not a list of hex values.  It stores colours in OKLCH with relative
+chroma and modifiers, and names the ramp instead:
+
+#+begin_src yaml
+  syntax:
+    tag: $palette.indigo.l2
+    func: $palette.yellow.l4      # function names
+    entity: $palette.blue.l3
+    string: $palette.green.l4
+    regexp: $palette.teal.l5
+    markup: $palette.red.l2
+    keyword: $palette.orange.l3
+    special: $palette.peach.l4
+    comment: $palette.gray.l4
+    constant: $palette.purple.l3  # constants
+    operator: $palette.pink.l3
+#+end_src
+
+So "constants are violet" and "function names are orange" are not decisions made
+in this package: =constant: purple= and =func: yellow= are written in that file.
+Resolve it with the repository's own generator (=src/= and =scripts/=); the
+values cannot be read as hex by hand, because they are OKLCH and the ramp steps
+are applied on top.  The resolved output is what the palettes here copy -- and
+=scripts/gen-palette.py= of this package turns it into them, see
+[[When Ayu changes]].
+
+The resolved output is what the palettes here copy, and it is published as well:
+the npm package *ayu* (v9.1.0 at the time of writing), in the
+=dist/generated/dark.js=, =mirage.js= and =light.js= files, each headed
+"Auto-generated from themes/dark.yaml".  Note the entry points -- =dist/dark.js=
+is a 404, only =dist/generated/dark.js= exists:
+
+#+begin_src sh
+  curl -s https://raw.githubusercontent.com/ayu-theme/ayu-colors/master/themes/dark.yaml
+  curl -s https://cdn.jsdelivr.net/npm/ayu@9.1.0/dist/generated/dark.js
+#+end_src
+
+The site itself carries the resolved colours in its CSS, which makes it a
+one-command cross-check of what the palette means:
+
+#+begin_src sh
+  curl -s https://ayutheme.com/ | tr ';' '\n' | grep -- '--syntax-'
+#+end_src
+
+That prints =--syntax-func: #ffb454= and =--syntax-constant: #d2a6ff= for the
+dark flavour, and the corresponding pairs for mirage and light.
+
+** The scope map
+
+Which TextMate scope gets which semantic token is the table that ships with
+that same repository, in =designer/lib/shiki-theme.ts= -- the mapping
+<https://ayutheme.com/> renders its previews with:
+
+#+begin_src sh
+  curl -s https://raw.githubusercontent.com/ayu-theme/ayu-colors/master/designer/lib/shiki-theme.ts
+#+end_src
+
+| Scope in =shiki-theme.ts=                      | Token       | Emacs face                        |
+|------------------------------------------------+-------------+-----------------------------------|
+| =comment=                                      | =comment=   | =font-lock-comment-*= (+ italic)  |
+| =string=, =entity.name.import=                 | =string=    | =font-lock-string-face=           |
+| =string.regexp=, =constant.character=          | =regexp=    | =font-lock-regexp-face=, =escape= |
+| =constant.numeric=, =constant.language=        | =constant=  | =font-lock-constant-face=         |
+| =variable=                                     | =editor.fg= | =font-lock-variable-name-face=    |
+| =variable.member=                              | =markup=    | =font-lock-property-*-face=       |
+| =variable.language= (this/self/super)          | =tag=       | =font-lock-builtin-face=          |
+| =storage=, =keyword=                           | =keyword=   | =font-lock-keyword-face=          |
+| =keyword.operator=, =punctuation.accessor=     | =operator=  | =font-lock-operator-face=         |
+| =entity.name.function=, =variable.function=    | =func=      | =font-lock-function-name-face=    |
+| =variable.parameter=, =meta.parameter=         | =constant=  | none of its own (see below)       |
+| =support.function=, =support.macro=            | =markup=    | =font-lock-builtin-face=          |
+| =entity.name=, =support.type=, =support.class= | =entity=    | =font-lock-type-face=             |
+| =entity.name.tag=, =meta.tag.sgml=             | =tag=       | the html/XML tag faces            |
+| =entity.other.attribute-name=                  | =func=      | the attribute faces               |
+| =punctuation.separator= (70% alpha)            | =editor.fg= | =font-lock-delimiter-face=        |
+| =punctuation.*=, =meta.brace=                  | =editor.fg= | =font-lock-punctuation-face=      |
+| =invalid=                                      | =#d95757=   | =font-lock-warning-face=          |
+
+The top of =ayu-themes.el= carries a shorter version of this table; this one is
+the full one.
+
+** Where the translation is coarse
+
+Emacs has fewer faces than TextMate has scopes, so three mappings cannot be
+exact.  They are approximations *inside* the official palette, not deviations
+from it -- the colours themselves are Ayu's:
+
+- =font-lock-builtin-face= is a single face for two scopes Ayu colours
+  differently: =support.function= and =support.macro= (=markup=, the red one),
+  and =variable.language= (=tag=, cyan, italic).  The theme gives it
+  =syntax-markup=, so =this=, =self= and =super= come out red where Ayu renders
+  them cyan, and the italic is lost.
+- =variable.parameter= is =constant= (violet) in Ayu, but Emacs has no parameter
+  face -- =font-lock-parameter-face= does not exist, checked in 31.1 -- and
+  parameters are declared through =font-lock-variable-name-face=, which Ayu
+  renders as plain foreground.  Function arguments therefore stay uncoloured.
+- =support.constant= is =operator= with italic in Ayu.  Emacs has no face of its
+  own for it either, so whatever face the mode picks decides the colour.
+
+Two more things worth knowing:
+
+- The alpha scopes are composited, because an Emacs face takes opaque colours
+  only.  The separators of Ayu (=punctuation.separator=, 70% of the foreground,
+  carried by the site as =--editor-fg-70a: #bfbdb6b3=) arrive as =fg-delim=,
+  which *is* that composite: =#bfbdb6= over =#10141c= gives =#8a8a88=, the value
+  in the palette.  The tag punctuation (50%, =--syntax-tag-50a=) is
+  approximated the same way.
+- The =*-strong= family is *not* from the official map.  It exists for the
+  opt-in =ayu-themes-contrasted-syntax=, and every value is a real colour of the
+  same palette -- the far end of the ramp of that hue.  =syntax-constant= is
+  =#d2a6ff= (=purple-3=) and =syntax-constant-strong= is =#e3c9ff= (=purple-5=);
+  the =day= palette runs the other way, so there it is the darkest step.  With
+  the option off, only the official values are used.  Three entries that look
+  like this family are not ramp ends but blends of two official colours --
+  =comment-strong=, =fg-strong= and =border-strong= -- and the next subsection
+  says what they are.
+
+** When Ayu changes
+
+The palettes are not hand-written, so an update is a re-run rather than a
+re-invention.  =scripts/gen-palette.py= reads the resolver output and prints the
+value of =ayu-themes-palettes= -- the same wrapping and blank lines as in the
+file, so the change is a paste and the diff shows only the colours that moved:
+
+#+begin_src sh
+  curl -sO https://cdn.jsdelivr.net/npm/ayu@9.1.0/dist/generated/dark.js
+  curl -sO https://cdn.jsdelivr.net/npm/ayu@9.1.0/dist/generated/mirage.js
+  curl -sO https://cdn.jsdelivr.net/npm/ayu@9.1.0/dist/generated/light.js
+  scripts/gen-palette.py --night dark.js --dusk mirage.js --day light.js
+#+end_src
+
+The same run prints the WCAG report the [[Contrast]] table above is built from.
+Which entries are Ayu's and which are computed here is spelled out in the
+docstring of the script; in short:
+
+- everything the resolver publishes is taken as it is: the =syntax.*= tokens and
+  the eleven hue ramps, the terminal colours, =vcs.*=, =surface.*=, =editor.*=,
+  =ui.*= and =common.*=;
+- the selection, findMatch, line and panel entries arrive with the alpha already
+  in their 8 digit hex (=3388ff40=), so they are composited over the flavour
+  background: an Emacs face takes opaque colours only;
+- the alphas Ayu does not supply are the constants of =build()=: *10%* for
+  =bg-alt=, *18%* and *38%* for the diff backgrounds, *35%* for the error and
+  warning ones, *30%* for =border-strong=, *50%* and *80%* for =fg-ghost= and
+  =fg-faint=, *70%* for =fg-delim=, *55%* for =accent-dim=;
+- =comment-strong= is the foreground mixed halfway into the comment colour, and
+  =fg-strong= moves the foreground 60% toward white (night, dusk) or black
+  (day);
+- =warning= and =bg-warning= use =palette.yellow.l4=, because Ayu has no warning
+  token of its own;
+- =bg-sunk= of the night flavour is the one deliberate deviation.
+
+The =*-strong= family exists because the =day= palette is low-contrast by
+design: its syntax colours sit at 2.0-3.3:1, which is what the official light
+theme looks like and what the classic ayu-light Sublime scheme uses.  The
+authentic values stay the default and the option is there for eyes that cannot
+read them; =night= and =dusk= need no help (comments 3.15 and 3.42, syntax
+5.9-12.8).
+
+Then:
+
+1. paste the block into =ayu-themes-palettes=;
+2. update the [[Contrast]] table from the report;
+3. add a CHANGELOG entry -- a change of colours is a minor release;
+4. run the checks of [[Development]]: the ert tests, the warning-free byte
+   compile and a load of all three flavours.  Finish by reading one value off a
+   real frame; batch Emacs does not render, so a wrong colour looks perfect
+   there.
 
 * Coverage
 
