@@ -1,6 +1,10 @@
 # Compiled
 *.elc
 
+# Python
+__pycache__/
+*.pyc
+
 # Packaging
 .cask/
 .eask/
