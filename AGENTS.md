@@ -363,3 +363,98 @@ example. Keep these conclusions, they save a lot of time.
 - A theme is a user-visible artefact, so any change to the colours or to the set
   of faces is at least a minor release; only documentation and comments are a
   patch.
+
+## Publishing to the Catalogues
+
+Two external catalogues list Emacs colour themes and both take a pull request
+from a fork. Keep the identifiers below in sync when a flavour is renamed: they
+are the interface with each site.
+
+### emacsthemes.com
+
+The site (repository `emacs-themes/emacsthemes`) builds from JSON recipes, one
+file per theme in `recipes/`, validated against the Zod schema in
+`src/core/schema-checker.ts`. The required fields are `name`, `id` (a slug),
+`description`, `repoUrl`, `rawUrls`, `type` (`light` or `dark`), `authors` and
+`tags`; `elispBefore` and `elispAfter` are optional.
+
+- **One recipe per flavour.** `type` holds a single value, and `id` is at once
+  the URL slug, the name of the screenshot folder and the symbol handed to
+  `enable-theme`, so the three flavours are three recipes: `ayu-night.json`,
+  `ayu-dusk.json` and `ayu-day.json`.
+- **`id` must equal the Emacs theme symbol.** The screenshot generator reads the
+  theme name out of a literal `deftheme` or `(provide '…-theme)` form in the
+  sources; ours live inside the `ayu-themes-define-theme` macro, so that scan
+  finds nothing and falls back to `id`. Hence `ayu-night`, never
+  `ayu-themes-night`.
+- **`rawUrls` order is the load order.** List `ayu-themes.el` first and the
+  flavour file second: the generator downloads every entry into one directory
+  and calls `load-file` on each in turn, so a recipe without the core leaves
+  `enable-theme` with an unbound theme.
+- **Screenshots come from their own pipeline.** One folder per `id` in
+  `static/imgs/` holding fourteen mode shots plus a 320×160 `preview.webp`, all
+  WebP, and the generator appends the `id` to
+  `src/templates/data/screenshot-generated-dates.json`. Commit the images and
+  that file together.
+
+The repository is about 2.4 GB, almost all of it `static/imgs`, so clone it
+sparsely and extend the sparse patterns with the new image folders before
+`git add` — git refuses to stage paths outside the sparse checkout:
+
+```sh
+git clone --filter=blob:none --sparse https://github.com/<you>/emacsthemes.git
+cd emacsthemes
+git sparse-checkout set --no-cone '/*' '!/static/imgs/'
+
+# after the recipes exist, generate the images and then widen the patterns
+git sparse-checkout set --no-cone '/*' '!/static/imgs/' \
+  '/static/imgs/ayu-night/' '/static/imgs/ayu-dusk/' '/static/imgs/ayu-day/'
+```
+
+Generate the screenshots with their Docker pipeline (`sh src/docker/run.sh
+--file ayu-night`, once per flavour). The first run builds a ~1.65 GB image
+(Debian sid, Emacs 30.2, Xvfb, ImageMagick) and every flavour takes a couple of
+minutes after that. The run must end with `Failed: 0`, and the preview has to be
+dark for night and dusk and light for day — look at it, do not trust the exit
+code alone.
+
+Run their checks in an `oven/bun:1` container before opening the PR. `bun run
+check` includes `oxfmt --check`, so a hand-wrapped recipe fails it even when the
+JSON is valid:
+
+```sh
+docker run --rm -v "$PWD":/app -w /app oven/bun:1 bash -lc \
+  'bun install --frozen-lockfile && bun run validate && bun test && bun run check'
+```
+
+### ayutheme.com
+
+The "Contribute" link on <https://ayutheme.com/> points at
+`src/data/ports.json` in [dempfi/ayu-site](https://github.com/dempfi/ayu-site):
+the port is one object appended to that array, then a pull request.
+
+```json
+  {
+    "name": "Emacs",
+    "logo": "emacs.svg",
+    "color": "special",
+    "link": "https://github.com/1buran/ayu-emacs-theme",
+    "authors": [{ "name": "1buran", "link": "https://github.com/1buran" }],
+    "stats": { "github": "1buran/ayu-emacs-theme" }
+  }
+```
+
+- **`logo` is a file name in `public/logos/`**, and `emacs.svg` already exists
+  upstream — do not add an asset.
+- **`color` is one of the palette's syntax names**: `markup`, `operator`,
+  `keyword`, `func`, `special`, `constant`, `string`, `regexp`, `entity` or
+  `tag`, rendered as `var(--syntax-<color>)` on the tile. Any other value
+  silently paints nothing.
+- **`stats.github`** feeds the tile its star count and "updated" date, and an
+  `authors` entry produces the `By …` credit.
+- There is **no video or GIF field**: the tile is text plus the logo, so no
+  screencast is needed. Verify by building the site (`npm ci && npm run build`)
+  and grepping `dist/index.html` for the new tile.
+
+At the time of writing the two submissions are `dempfi/ayu-site#6` and
+`emacs-themes/emacsthemes#7`.

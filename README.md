@@ -47,8 +47,30 @@ number.
 ```elisp
   (use-package ayu-themes
     :straight (:type git :host github :repo "1buran/ayu-emacs-theme"
-                     :files ("ayu-themes.el" "ayu-*-theme.el")))
+                     :files ("ayu-themes.el" "ayu-*-theme.el"))
+    :custom
+    ;; Options are read when a theme is defined, so they have to be in place
+    ;; before `load-theme' runs: `:custom' is applied before `:config'.
+    (ayu-themes-contrasted-syntax t) ; the day flavour is soft by design
+    (ayu-themes-scale-org-headlines t)
+    :config
+    (load-theme 'ayu-day t)
+    (keymap-global-set "C-c y" #'ayu-themes-cycle))
 ```
+
+The options belong in `:custom` (or `:init`), never in `:config` after the
+`load-theme` call: the face specs of a theme are computed when it is defined, so
+a value set later changes nothing until `M-x ayu-themes-refresh`.
+
+`straight` also builds the package autoloads and the `ayu-*-theme.el` files use
+them to add their own directory to `custom-theme-load-path` -- that is what lets
+`load-theme` find a flavour in the straight build directory, with no extra
+`load-path` line.
+
+Swap `ayu-day` in `:config` for `ayu-night` or `ayu-dusk` to start on another
+flavour; `(ayu-themes-load 'night)` does the same and disables the other two Ayu
+themes first, for when `:config` runs after some other theme was already
+enabled.
 
 ### From a local checkout
 

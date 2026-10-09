@@ -32,8 +32,9 @@ of `ayu-themes.el` and of the three `ayu-*-theme.el` files carry.
   `ayu-themes-org-intense-colors` and `ayu-themes-mode-line-border`, with a
   `ayu-themes-toggle-*` command each.
 - The commands `ayu-themes-load`, `ayu-themes-cycle` and `ayu-themes-refresh`.
-- `README.md`: installation, usage, the options, a WCAG contrast table for all
-  three flavours, the coverage list and a note on the architecture.
+- `README.md`: installation (including a full `use-package` + `straight.el`
+  setup), usage, the options, a WCAG contrast table for all three flavours, the
+  coverage list and a note on the architecture.
 - `AGENTS.md`: the contributor guide, including the provenance of the colours,
   the verification commands and the research notes that explain why the package
   is laid out the way it is.
