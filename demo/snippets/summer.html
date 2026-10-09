@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sonnet 18 &mdash; the lease of a summer</title>
+    <style>
+      :root { --ink: #5c6166; --lease: 3s; }
+      li:nth-child(odd) { color: var(--ink); }
+      li:nth-child(even) { color: #eba400; }
+      .expired::after { content: " the lease of summer is over"; }
+    </style>
+  </head>
+  <body>
+    <!-- "Shall I compare thee to a summer's day?" -->
+    <main class="sonnet" data-lease="3s">
+      <h1>Sonnet&nbsp;18</h1>
+      <ol>
+        <li>Shall I compare thee to a summer&rsquo;s day?</li>
+        <li>Thou art more lovely and more temperate:</li>
+        <li>Rough winds do shake the darling buds of May,</li>
+        <li>And summer&rsquo;s lease hath all too short a date:</li>
+      </ol>
+      <button id="renew">renew the lease</button>
+    </main>
+    <script>
+      const renew = document.querySelector('#renew');
+      renew.addEventListener('click',
+        () => renew.parentElement.classList.toggle('expired'));
+    </script>
+  </body>
+</html>

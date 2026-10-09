@@ -51,7 +51,7 @@ flavour background, because an Emacs face takes opaque colours only:
 
 The output is the block to paste into `ayu-themes-palettes' plus the WCAG
 contrast report printed from the same values; the report is what the Contrast
-table of README.org is built from.  After a re-run, diff the block against
+table of README.md is built from.  After a re-run, diff the block against
 ayu-themes.el, update that table, and re-run the package checks.
 """
 

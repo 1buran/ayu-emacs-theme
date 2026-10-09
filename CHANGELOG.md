@@ -32,7 +32,7 @@ of `ayu-themes.el` and of the three `ayu-*-theme.el` files carry.
   `ayu-themes-org-intense-colors` and `ayu-themes-mode-line-border`, with a
   `ayu-themes-toggle-*` command each.
 - The commands `ayu-themes-load`, `ayu-themes-cycle` and `ayu-themes-refresh`.
-- `README.org`: installation, usage, the options, a WCAG contrast table for all
+- `README.md`: installation, usage, the options, a WCAG contrast table for all
   three flavours, the coverage list and a note on the architecture.
 - `AGENTS.md`: the contributor guide, including the provenance of the colours,
   the verification commands and the research notes that explain why the package
@@ -79,10 +79,21 @@ of `ayu-themes.el` and of the three `ayu-*-theme.el` files carry.
   weaker foregrounds), `comment-strong`, `fg-strong`, the `*-strong` ramp ends,
   `warning` from `palette.yellow.l4`, and the `bg-sunk` deviation. `.gitignore`
   now covers `__pycache__/` for it.
+- `demo/`: the recordings behind the `Demo` section of the README. One
+  [vhs](https://github.com/charmbracelet/vhs) tape (`demo/vhs.tape`) runs all
+  three flavours through the six generated snippets -- go, php, js, html, python
+  and shell -- and writes both the GIF and a still screenshot into
+  `demo/output/`. The tape starts Emacs through `emacsclient -c`, so the
+  recordings show the theme inside a real configuration: `demo/init.el` picks the
+  flavour up from `demo/output/active.mode`, walks the snippets with `C-n`, and
+  silences the echo area -- the line under the mode line, where a configuration's
+  messages would otherwise stay -- for as long as the recorded frame lives. Added
+  [xc](https://xcfile.dev/) tasks for recording the screen and for publishing the
+  recordings to Imgur and rewriting the links in the README.
 
 ### Fixed
 
-- `README.org` and `AGENTS.md` claimed that every palette value comes from the
+- `README.md` and `AGENTS.md` claimed that every palette value comes from the
   Ayu palette files. 19 entries per flavour do not: they are the composited
   alpha colours and the `*-strong` family, computed by
   `scripts/gen-palette.py`. Both documents say so now, and the provenance

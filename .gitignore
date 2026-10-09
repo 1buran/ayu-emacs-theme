@@ -19,3 +19,10 @@ dist/
 
 # Undo-tree save-files
 *.~undo-tree
+
+# Imgur client id for the publish recordings task
+.env
+
+# Recorded demos; README.md links to the copies on Imgur
+demo/output/*
+!demo/output/.gitkeep
