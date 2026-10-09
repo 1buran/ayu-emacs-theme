@@ -1,7 +1,4 @@
 # Ayu colour themes for GNU Emacs
-![dusk](https://i.imgur.com/99zjKco.gif)
-![night](https://i.imgur.com/fgtrmFk.gif)
-![day](https://i.imgur.com/8UA4EIY.gif)
 
 This package ports the three [Ayu](https://ayutheme.com/) flavours to Emacs:
 
@@ -38,6 +35,10 @@ request "the lease of a summer"), but the colours are not: the tape paints
 nothing itself, so every pixel of the frame is one Emacs drew from the palette.
 The cursor is walked over the lines, which is what lights up the current line
 number.
+
+![dusk](https://i.imgur.com/99zjKco.gif)
+![night](https://i.imgur.com/fgtrmFk.gif)
+![day](https://i.imgur.com/8UA4EIY.gif)
 
 ## Installation
 
